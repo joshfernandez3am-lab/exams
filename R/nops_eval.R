@@ -256,8 +256,14 @@ nops_eval_check2 <- function(scans = "Daten2.txt", solutions = dir(pattern = "\\
     }
   }
 
-  ## return with row names (if possible)
-  if(!any(duplicated(d[, 2L]))) rownames(d) <- d[, 2L]
+  ## warn about duplicated exam IDs (if any)
+  if(any(dup <- duplicated(d[, 2L]))) {
+    warning(paste(
+      "Matching scans and string_scans is not possible with duplicated IDs. Dropping duplicates of the following string IDs:",
+      paste(unique(d[dup, 2L]), collapse = ", ")))
+    d <- d[!dup, , drop = FALSE]
+  }
+  rownames(d) <- d[, 2L]
   return(d)
 }
 
@@ -428,7 +434,7 @@ nops_eval_results_table <- function(results = "nops_eval.csv", solutions = dir(p
       horiz = TRUE, las = 1, main = expression(P(pts != 0)))
     abline(v = 0.5, lty = 2)
     if(negpoints) {
-      barplot(prop.table(tab[, -2L], 1L)[nrow(tab):1L, 2L], xlim = c(0, 1),
+      barplot(prop.table(tab[, -2L, drop = FALSE], 1L)[nrow(tab):1L, 2L], xlim = c(0, 1),
         horiz = TRUE, las = 1, main = expression(P(paste(group("", pts > 0 ~ phantom(), "|"), phantom() ~ pts != 0))))
       abline(v = 0.5, lty = 2)
     }

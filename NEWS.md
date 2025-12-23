@@ -1,3 +1,127 @@
+# exams 2.4-3
+
+* New convenience functions for keeping track of all elements
+  within an exercise (especially in cloze exercises): `add_cloze()` and
+  `format_metainfo()`. These are particularly helpful for creating
+  relatively simple exercises or tutorials where the elements are fixed
+  or computed from a given data set etc. See `help("add_cloze", package = "exams")`
+  for documentation and the new `penguins.Rmd` (or `penguins.Rnw`) exercise
+  for a worked example.
+
+* Added first release version of new interface `exams2ans()` for the
+  Dutch testing platform [Ans](https://support.ans.app/). It is
+  essentially a wrapper to `exams2qti21()` along with a few Ans-specific
+  modifications of the QTI XML specification. The function has only received
+  limited testing so far and is likely to improve in future versions. All five
+  item types are supported but cloze questions can only consist of num and string
+  combinations or mchoice and schoice combinations. The work on the function was 
+  financially supported by the Dutch National Growth Fund Programme Npuls 
+  (Regulation 'IO: 112026'). 
+
+* Added first release version of new interface `exams2wooclap()` for 
+  [Wooclap](https://www.wooclap.com/), a digital voting system for creating 
+  interaction during teaching moments. It is essentially a wrapper to 
+  `exams2moodle()` along with a few Wooclap-specific
+  tweaks. The function has only received limited testing so far and is likely to 
+  improve in future versions. The supported exercise types are num, schoice, mchoice, 
+  and string (but only limited support for cloze questions). The work on the function 
+  was financially supported by the Dutch National Growth Fund Programme Npuls 
+  (Regulation 'IO: 112026').
+
+* In `nops_fix(..., display = "interactive")` there is now also a checkbox
+  for rotating the PNG of a scanned sheet.
+
+* In `exams2pdf()` the handling of duplicated graphics file names now also
+  works for `pandoc` versions 3.2.1 or greater. Previously, the addition of
+  `\pandocbounded{}` interfered with the correct handling (reported by
+  Delia Gramm).
+
+* Added support for `\pandocbounded{}` (as well as some other LaTeX packages)
+  in the default template for `exams2pandoc()`, mirroring changes that had
+  been done in earlier versions for the `exams2pdf()` and `exams2nops()`
+  templates (reported in <https://stackoverflow.com/questions/79829958/>).
+
+* In the manual page `?exams2ilias` it is now explained rather explicitly that
+  many features of the resulting QTI exports cannot be imported correctly
+  into recent versions of ILIAS. Any ILIAS users who have some experience
+  in QTI XML who would be willing to help with the R/exams interface are
+  encouraged to get in touch.
+
+* In `exams2moodle()`, `exams2qti12()` (and hence also in `exams2canvas()`),
+  and `exams2qti21()` (and hence also in `exams2openolat()`) the argument `seed`
+  has been added and is simply passed on to `xexams()`. This allows to fix
+  the random seeds for generating the exercise pools in these functions.
+
+* New arguments `exams2nops(..., shortquiz = FALSE, filbreak = FALSE)`. With
+  `shortquiz = TRUE` it is possible to create a short quiz that contains the
+  questions directly at the bottom of a single exam sheet. Setting `filbreak = TRUE`
+  a _potential_ page break can be added at the beginning of each question, so
+  that it is more likely that all parts of a question appear on the same
+  page.
+
+* Additional NOPS language support: Basque (`eu`, contributed by Jone
+  Guenetxea Gorostiza & Iker Apraiz Sánchez).
+
+* In `exams2nops()` the `\usepackage[utf8]{inputenc}` is not included anymore
+  in order to facilitate setting `texengine = "xelatex"` or `"lualatex"`.
+  The setting is also not needed anymore in pdfLaTeX because it is the default
+  since 2018.
+
+* In `exams2nops(..., language = "de")` the latest new German hyphenation
+  patterns are loaded by `\babelprovide[hyphenrules=ngerman-x-latest]{ngerman}`
+  (raised by Florian Hauser).
+
+* Examples from the manual page of  `exams2nops()` are now excluded from the
+  CRAN checks because they can sometimes take more than 5 seconds depending on
+  the LaTeX setup. Instead a dedicated `tests/exams2nops.R` test file is
+  included now.
+
+* MIME type handling for Base 64 coding of supplementary files has been improved.
+  Some more MIME types have been added to the lookup table and text vs binary
+  guessing has been added for unknown file types.
+
+* The handling of `|` symbols in the `exsolution` meta-information has been
+  improved somewhat. The code still aims to support `exsolution` values
+  containing regular expressions but is somewhat more robust compared to the
+  previous version. However, there are still limitations and future improvements
+  are planned. Users who run into problems with `|` in the `exsolution` are
+  encouraged to get in touch.
+
+* Numeric values in the meta-information of R/Markdown exercises are now recovered
+  more reliably, even when `knitr` switches to scientific notation by default
+  (reported by Delia Gramm).
+
+* The `pointvec()` function set up by `exams_eval(partial = TRUE, ...)` now
+  warns when it is applied to `mchoice` answers without correct answer alternatives
+  (because it is impossible to attain any credits in that case).
+
+* In `exams2qti21()` (and hence also `exams2openolat()`) it is now assured that
+  `essay` and `file` interactions in `cloze` exercises are always outside of
+  a paragraph.
+
+* New function `match_exams_markup()` can be used within an exercise to use the
+  same text markup (`"markdown"` vs. `"latex"`) that `xweave()` is using.
+
+* New argument `answerlist(..., write = TRUE)` which can be set to `FALSE` in
+  order to return the answerlist text, rather than writing it to the output.
+
+* HTML and Markdown converters now try harder to preserve file names in download
+  links when encoding supplementary files in Base64.
+
+* In `nops_scan()` the shaving of long text above the exam ID box is improved
+  (reported in <https://stackoverflow.com/questions/79835752> by Florian Oswald).
+  Furthermore, an informative error is thrown now if the scanner markings
+  cannot be found when reading a PNG file (reported by Filipe Alberto).
+
+* Bug fix in `nops_eval()` for exams with string scans and duplicated exam IDs.
+  Now the duplicates are dropped prior to evaluation along with a warning.
+  Previously, the string scans were erroneously omitted (reported in
+  <https://stackoverflow.com/questions/79838688> by Samuel Merk).
+
+* In `answerlist()` the default `markup` is now determined via `match_exams_markup()`
+  (rather than using `"latex"`).
+
+
 # exams 2.4-2
 
 * Bug fix in `exams2moodle()` for `cloze` exercises: The `rule` was
@@ -115,7 +239,7 @@
 * Changed default HTML/mathematics `converter` in `exams2canvas()` to
   `converter = "pandoc-mathjax"` (rather than enforcing MathML output as
   before). Recent versions of Canvas have improved MathJax support (see
-  [Canvas Release Notes 2021-02-20](https://community.canvaslms.com/t5/Canvas-Releases/Canvas-Release-Notes-2021-02-20/ta-p/434781#toc-hId-698876024))
+  [Canvas Release Notes 2021-02-20](https://community.instructure.com/en/discussion/434781/canvas-release-notes-2021-02-20#toc-hId-698876024))
   and employing MathJax in the Canvas quiz might facilitate importing the quiz
   into a Canvas question bank (reported and tested by Jeff Pisklak).
 

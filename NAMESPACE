@@ -18,7 +18,7 @@ importFrom("grDevices",
 importFrom("base64enc",
   "base64decode", "base64encode", "dataURI")
 importFrom("knitr",
-  "knit", "opts_chunk", "opts_hooks", "render_sweave")
+  "knit", "kable", "opts_chunk", "opts_hooks", "render_sweave")
 importFrom("rmarkdown",
   "pandoc_available", "pandoc_convert")
 
@@ -37,6 +37,9 @@ export(
   "num2tol",
   "num_to_tol",
   "expar",
+  "add_cloze",
+  "format_metainfo",
+  "initialize_exercise",
 
   ## mchoice/schoice generators
   "num2schoice",
@@ -67,6 +70,7 @@ export(
   "include_tikz",
   "match_exams_call",
   "match_exams_device",
+  "match_exams_markup",
   "match_exams_iteration",
 
   ## stress testing,
@@ -94,6 +98,7 @@ export(
   "openolat_config",
   "exams2canvas",
   "exams2ilias",
+  "exams2ans",
   ## "exams2inspera",
 
   ## Blackboard driver (only partially QTI-based)
@@ -118,6 +123,7 @@ export(
   "make_question_moodle",
   "make_question_moodle23",
   "moodle2exams",
+  "exams2wooclap",
 
   ## ARSnova/Particify driver
   "exams2arsnova",
@@ -134,7 +140,7 @@ export(
   "exams2testvision",
   "make_itembody_testvision",
   "testvision2exams",
-  
+
   ## Grasple driver
   "exams2grasple",
   "make_exams_write_grasple",

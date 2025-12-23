@@ -12,14 +12,14 @@
 \usage{
   exams2moodle(file, n = 1L, nsamp = NULL, dir = ".",
     name = NULL, quiet = TRUE, edir = NULL,
-    tdir = NULL, sdir = NULL, verbose = FALSE, rds = FALSE,
+    tdir = NULL, sdir = NULL, verbose = FALSE, rds = FALSE, seed = NULL,
     resolution = 100, width = 4, height = 4, svg = FALSE, encoding = "UTF-8",
     iname = TRUE, stitle = NULL,
     testid = FALSE, zip = FALSE, num = NULL, mchoice = NULL,
     schoice = mchoice, string = NULL, cloze = NULL,
     points = NULL, rule = NULL, pluginfile = TRUE, forcedownload = FALSE,
     converter = "pandoc-mathjax", envir = NULL, engine = NULL,
-    table = "table_shade", css = NULL, \dots)
+    table = "table_shade", css = NULL, flavor = c("plain", "wooclap"), \dots)
 
   make_question_moodle(name = NULL, solution = TRUE,
     shuffle = FALSE, penalty = 0, answernumbering = "abc",
@@ -27,7 +27,7 @@
     truefalse = c("True", "False"), enumerate = FALSE, abstention = NULL,
     eval = list(partial = TRUE, negative = FALSE, rule = "false2"),
     essay = NULL, numwidth = NULL, stringwidth = NULL,
-    css = NULL)
+    css = NULL, flavor = "plain")
 }
 
 \arguments{
@@ -55,6 +55,12 @@
     be reported?}
   \item{rds}{logical indicating whether the return list should also be
     saved as an RDS data file.}
+  \item{seed}{integer matrix or logical. Either \code{NULL} (default), logical, or a
+    matrix of random seeds for each possible exercise to be set prior to calling
+    \code{driver$sweave}. If \code{NULL} no random seeds are set. If a matrix,
+    the number of rows must be \code{n} and the number of columns must
+    correspond to \code{unlist(file)}. If \code{TRUE} a suitable matrix of seeds
+    is sampled.}
   \item{resolution, width, height}{numeric. Options for rendering PNG (or SVG)
     graphics passed to \code{\link[exams]{xweave}}.}
   \item{svg}{logical. Should graphics be rendered in SVG or PNG (default)?}
@@ -70,6 +76,11 @@
     CSS style file(s). Alternatively, a string (or vector) with a \code{<style>}
     tag to be included in every exercise. This is used internally for the \code{table}
     styles above, see also the details below.}    
+  \item{flavor}{character. Which Moodle XML \dQuote{flavor} should be used? The default
+    is \code{"plain"} Moodle XML for import in Moodle. Additionally, \code{"wooclap"}
+    makes some adaptations for importing Moodle XML in Wooclap. Typically, users should
+    not set this argument directly but use the convenience interface \code{\link{exams2wooclap}}
+    instead (which use the \code{flavor} argument internally along with further customizations).}
   \item{iname}{logical. Should the exam \code{name} be included in the path in the \code{<category>}
     tag in the final XML file? This option may be useful when questions should be added to
     certain already existing question banks, i.e. \code{iname = TRUE} will include the exam

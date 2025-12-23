@@ -24,7 +24,7 @@ nops_scan <- function(
     warning(paste("The following images cannot be found:", paste(images[!im], collapse = ", ")))
     images <- images[im]
   }
-  if(length(images) < 0L) {
+  if(length(images) < 1L) {
     stop("No images found.")
   }
 
@@ -389,8 +389,8 @@ shave <- function(x, zap = 0.07) {
 ## shave box (and white margins) of a pixel matrix
 shave_box <- function(x, border = 0.1, clip = TRUE)
 {  
-  rm <- which(rowMeans(x) > 0.38)
-  cm <- which(colMeans(x) > 0.38)
+  rm <- which(rowMeans(x) > 0.6)
+  cm <- which(colMeans(x) > 0.4)
   if(length(rm) < 1L || length(cm) < 1L) stop("no box found")
   rm <- range(rm)
   cm <- range(cm)
@@ -544,6 +544,7 @@ trim_nops_scan <- function(x, verbose = FALSE, minrot = 0.002)
 
   while(mean(xbl) < 0.0016 | mean(xbr) < 0.0016 | mean(rowMeans(xbl) > 0.03) < 0.005 | mean(rowMeans(xbr) > 0.03) < 0.005) {
     rb <- rb - 0.01
+    if(rb <= 0.66) stop("could not find scanner markings")
     xbl <- x[seq(round(rb * d[1L]), d[1L]), seq(1, round(0.17 * d[2L]))]
     xbr <- x[seq(round(rb * d[1L]), d[1L]), seq(round(0.83 * d[2L]), d[2L])]  
   }

@@ -10,9 +10,24 @@ string2mchoice <- function(x, single = FALSE) {
   return(x)
 }
 
-## convert exsolution strings to numeric, stopping if result is not a finite number
+## convert exsolution strings to numeric (supporting knitr's scientific notation),
+## stopping if result is not a finite number
 string2num <- function(x) {
-  x <- as.numeric(x)
+  ## translate LaTeX scientific notation produced by knitr
+  if(any(grepl("\\times 10^", x, fixed = TRUE))) {
+    for (zap in c("\\ensuremath", "{", "}")) x <- gsub(zap, "", x, fixed = TRUE)
+    x <- gsub("([ \t]*\\\\times[ \t]*10\\^)([-]*[0-9]+)", "e\\2", x)
+  }
+
+  ## translate HTML scientific notation produced by knitr
+  if(any(grepl("&times; 10<sup>", x, fixed = TRUE))) {
+    x <- gsub("([ \t]*&times;[ \t]*10<sup>)([-]*[0-9]+)(</sup>)", "e\\2", x)
+  }
+
+  ## coercion
+  x <- suppressWarnings(as.numeric(x))
+
+  ## sanity check
   if(!all(is.numeric(x) & !is.na(x) & is.finite(x))) stop("all numeric items must be finite and non-missing")
   return(x)
 }
@@ -24,20 +39,25 @@ mchoice2text <- function(x, markup = c("latex", "markdown"))
     "markdown" = ifelse(x, "**True**", "**False**"))
 }
 
-answerlist <- function(..., sep = ". ", markup = c("latex", "markdown"))
+answerlist <- function(..., sep = ". ", markup = NULL, write = TRUE)
 {
-  if(match.arg(markup) == "latex") {
-    writeLines(c(
-      "\\begin{answerlist}",
+  markup <- match_exams_markup()
+  if (is.null(markup)) markup <- c("latex", "markdown")
+  markup <- match.arg(markup, c("latex", "markdown"))
+  ans <- if(markup == "latex") {
+    c("\\begin{answerlist}",
       paste("  \\item", do.call("paste", list(..., sep = sep))),
-      "\\end{answerlist}"
-    ))
+      "\\end{answerlist}")
   } else {
-    writeLines(c(
-      "Answerlist",
+    c("Answerlist",
       "----------",
-      paste("*", do.call("paste", list(..., sep = sep)))
-    ))
+      paste("*", do.call("paste", list(..., sep = sep))))
+  }
+  if (write) {
+    writeLines(ans)
+    invisible(ans)
+  } else {
+    return(ans)
   }
 }
 

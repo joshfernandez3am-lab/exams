@@ -10,7 +10,7 @@ library("tth")
 
 
 ###################################################
-### code chunk number 2: exams2.Rnw:227-230
+### code chunk number 2: exams2.Rnw:225-228
 ###################################################
 invisible(file.copy(system.file("exercises", "tstat.Rnw", package = "exams"), "tstat.Rnw"))
 Rnw <- readLines("tstat.Rnw")
@@ -18,7 +18,7 @@ cat(c("\\begin{verbatim}", Rnw, "\\end{verbatim}"), sep = "\n")
 
 
 ###################################################
-### code chunk number 3: exams2.Rnw:242-246
+### code chunk number 3: exams2.Rnw:240-244
 ###################################################
 set.seed(1090)
 Sweave("tstat.Rnw")
@@ -27,13 +27,13 @@ file.remove(c("tstat.Rnw", "tstat.tex"))
 
 
 ###################################################
-### code chunk number 4: exams2.Rnw:248-249
+### code chunk number 4: exams2.Rnw:246-247
 ###################################################
 cat(c("\\begin{verbatim}", tex, "\\end{verbatim}"), sep = "\n")
 
 
 ###################################################
-### code chunk number 5: exams2.Rnw:262-263
+### code chunk number 5: exams2.Rnw:260-261
 ###################################################
 cat(tex, sep = "\n")
 
