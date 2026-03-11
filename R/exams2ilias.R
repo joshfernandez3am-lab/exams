@@ -205,9 +205,10 @@ ilias_item_header <- function(id, title, maxattempts = NULL) {
 
 
 ilias_item_metadata <- function(questiontype, ilias_version = "9.17.0",
-  author = "R/exams", textgaprating = "ci")
+  author = "R/exams", textgaprating = "ci", include_author = TRUE,
+  include_fixed_text_length = TRUE)
 {
-  c(
+  xml <- c(
     '<qticomment></qticomment>',
     '<itemmetadata>',
     '<qtimetadata>',
@@ -220,16 +221,8 @@ ilias_item_metadata <- function(questiontype, ilias_version = "9.17.0",
     paste0('<fieldentry>', ilias_escape_text(questiontype), '</fieldentry>'),
     '</qtimetadatafield>',
     '<qtimetadatafield>',
-    '<fieldlabel>AUTHOR</fieldlabel>',
-    paste0('<fieldentry>', ilias_escape_text(author), '</fieldentry>'),
-    '</qtimetadatafield>',
-    '<qtimetadatafield>',
     '<fieldlabel>textgaprating</fieldlabel>',
     paste0('<fieldentry>', textgaprating, '</fieldentry>'),
-    '</qtimetadatafield>',
-    '<qtimetadatafield>',
-    '<fieldlabel>fixedTextLength</fieldlabel>',
-    '<fieldentry/>',
     '</qtimetadatafield>',
     '<qtimetadatafield>',
     '<fieldlabel>identicalScoring</fieldlabel>',
@@ -238,6 +231,24 @@ ilias_item_metadata <- function(questiontype, ilias_version = "9.17.0",
     '</qtimetadata>',
     '</itemmetadata>'
   )
+  if(include_author) {
+    xml <- append(xml, c(
+      '<qtimetadatafield>',
+      '<fieldlabel>AUTHOR</fieldlabel>',
+      paste0('<fieldentry>', ilias_escape_text(author), '</fieldentry>'),
+      '</qtimetadatafield>'
+    ), after = 9L)
+  }
+  if(include_fixed_text_length) {
+    pos <- grep("<fieldlabel>identicalScoring</fieldlabel>", xml, fixed = TRUE)[1L] - 1L
+    xml <- append(xml, c(
+      '<qtimetadatafield>',
+      '<fieldlabel>fixedTextLength</fieldlabel>',
+      '<fieldentry/>',
+      '</qtimetadatafield>'
+    ), after = pos)
+  }
+  xml
 }
 
 
@@ -368,6 +379,15 @@ ilias_gap_xml <- function(type, gap_id, choices, solution, tolerance, points, ma
     tol <- suppressWarnings(as.numeric(tolerance))
     tol <- tol[is.finite(tol)]
     tol <- if(length(tol)) max(tol) else 0
+    if(!is.finite(tol) || tol <= 0) {
+      value_txt <- ilias_format_value(values[1L])
+      if(grepl(".", value_txt, fixed = TRUE)) {
+        decimals <- nchar(sub(".*\\.", "", value_txt))
+        tol <- 0.5 * 10^(-decimals)
+      } else {
+        tol <- 0.1
+      }
+    }
     cols <- if(!is.na(maxchars[3L])) maxchars[3L] else max(2L, nchar(ilias_format_value(values[1L])))
     presentation <- c(
       paste0('<response_num ident="', gap_id, '" numtype="Decimal" rcardinality="Single">'),
@@ -494,10 +514,10 @@ make_item_ilias_cloze <- function(item_xml, x, item_id, title) {
 
   c(
     ilias_item_header(item_id, title, ilias_item_maxattempts(item_xml)),
-    ilias_item_metadata("CLOZE QUESTION"),
+    ilias_item_metadata("CLOZE QUESTION",
+      include_author = FALSE, include_fixed_text_length = FALSE),
     presentation,
     resprocessing,
-    ilias_itemfeedback(item_xml),
     '</item>'
   )
 }

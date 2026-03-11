@@ -22,6 +22,11 @@ stopifnot(any(grepl("<fieldentry>CLOZE QUESTION</fieldentry>", lm_qti, fixed = T
 stopifnot(any(grepl('<response_str ident="gap_0"', lm_qti, fixed = TRUE)))
 stopifnot(any(grepl('<response_num ident="gap_1"', lm_qti, fixed = TRUE)))
 stopifnot(any(grepl("<fieldlabel>textgaprating</fieldlabel>", lm_qti, fixed = TRUE)))
+stopifnot(!any(grepl("<fieldlabel>AUTHOR</fieldlabel>", lm_qti, fixed = TRUE)))
+stopifnot(!any(grepl("<fieldlabel>fixedTextLength</fieldlabel>", lm_qti, fixed = TRUE)))
+stopifnot(!any(grepl("<itemfeedback", lm_qti, fixed = TRUE)))
+stopifnot(any(grepl('minnumber="', lm_qti, fixed = TRUE)))
+stopifnot(!any(grepl('minnumber="([^"]+)" maxnumber="\\1"', lm_qti, perl = TRUE)))
 stopifnot(any(grepl('<Question QRef="il_0_qst_', lm_qpl, fixed = TRUE)))
 
 ## placeholder-based cloze export
@@ -33,6 +38,7 @@ vowels_qti <- read_zip_xml(vowels_zip, "vowels_ilias_qpl/vowels_ilias_qti.xml")
 stopifnot(!any(grepl("<assessment", vowels_qti, fixed = TRUE)))
 stopifnot(any(grepl('<response_str ident="gap_5"', vowels_qti, fixed = TRUE)))
 stopifnot(any(grepl('<mattext texttype="text/xhtml"> </mattext>', vowels_qti, fixed = TRUE)))
+stopifnot(!any(grepl("<itemfeedback", vowels_qti, fixed = TRUE)))
 
 ## standard multiple-choice export should also use top-level items
 exams2ilias(system.file("exercises/ttest.Rmd", package = "exams"),
