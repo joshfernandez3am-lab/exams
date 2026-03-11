@@ -8,7 +8,7 @@ exams2ilias <- function(file, n = 1L, nsamp = NULL, dir = ".",
   duration = NULL, stitle = "Exercise", ititle = "Question",
   adescription = "Please solve the following exercises.",
   sdescription = "Please answer the following question.",
-  maxattempts = 1, cutvalue = 0, solutionswitch = TRUE, zip = TRUE,
+  maxattempts = 0, cutvalue = 0, solutionswitch = TRUE, zip = TRUE,
   points = NULL, eval = list(partial = TRUE, negative = FALSE),
   converter = "pandoc-mathjax", xmlcollapse = TRUE,
   metasolution = FALSE, ...)
@@ -44,6 +44,9 @@ exams2ilias <- function(file, n = 1L, nsamp = NULL, dir = ".",
   dir.create(workdir <- tempfile())
   on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
 
+  maxattempts_qti12 <- maxattempts
+  maxattempts_qti12[is.infinite(maxattempts_qti12) | maxattempts_qti12 == 0] <- 1
+
   rval <- exams2qti12(file = file, n = n, nsamp = nsamp, dir = workdir,
     name = name, quiet = quiet, edir = edir, tdir = tdir, sdir = sdir, verbose = verbose,
     resolution = resolution, width = width, height = height, svg = svg, encoding  = encoding,
@@ -51,7 +54,7 @@ exams2ilias <- function(file, n = 1L, nsamp = NULL, dir = ".",
     template = template,
     duration = duration, stitle = stitle, ititle = ititle,
     adescription = adescription, sdescription = sdescription,
-    maxattempts = maxattempts, cutvalue = cutvalue, solutionswitch = solutionswitch, zip = FALSE,
+    maxattempts = maxattempts_qti12, cutvalue = cutvalue, solutionswitch = solutionswitch, zip = FALSE,
     points = points, eval = eval, converter = converter, xmlcollapse = FALSE,
     base64 = base64, flavor = "ilias", ...)
 
@@ -68,10 +71,13 @@ exams2ilias <- function(file, n = 1L, nsamp = NULL, dir = ".",
     stop("failed to match generated QTI items back to exercises")
   }
 
-  prefix <- paste0(as.integer(Sys.time()), make_id(5))
+  prefix <- paste0(format(as.integer(Sys.time()), scientific = FALSE, trim = TRUE),
+    sprintf("%04d", sample.int(10000L, 1L) - 1L))
   width_id <- max(1L, nchar(length(items)))
   item_xml <- vector("list", length(items))
   qrefs <- character(length(items))
+  pool_id <- paste0("il_0_qpl_", prefix)
+  final_maxattempts <- rep(maxattempts, length.out = length(items))
 
   for(k in seq_along(items)) {
     pos <- lookup[[names(items)[k]]]
@@ -82,15 +88,16 @@ exams2ilias <- function(file, n = 1L, nsamp = NULL, dir = ".",
     if(is.null(title) || identical(title, "")) {
       title <- ilias_extract_item_title(items[[k]])
     }
-    item_id <- sprintf("il_0_qst_%s_%0*d", prefix, width_id, k)
+    item_id <- paste0("il_0_qst_", prefix, sprintf(paste0("%0", width_id, "d"), k))
     rval[[i]][[j]]$metainfo$id <- item_id
     qrefs[k] <- item_id
 
     if(identical(x$metainfo$type, "cloze")) {
-      item_xml[[k]] <- make_item_ilias_cloze(items[[k]], rval[[i]][[j]], item_id, title)
+      item_xml[[k]] <- make_item_ilias_cloze(items[[k]], rval[[i]][[j]], item_id, title,
+        final_maxattempts[k])
     } else {
       item_xml[[k]] <- patch_item_ilias(items[[k]], item_id, title,
-        ilias_question_type(x$metainfo$type))
+        ilias_question_type(x$metainfo$type), final_maxattempts[k])
     }
   }
 
@@ -107,7 +114,7 @@ exams2ilias <- function(file, n = 1L, nsamp = NULL, dir = ".",
     pkgdir <- file.path(workdir, name)
     dir.create(pkgdir)
     writeLines(qti_xml, file.path(pkgdir, paste0(name, "_qti.xml")))
-    writeLines(make_qpl_xml(name, qrefs), file.path(pkgdir, paste0(name, "_qpl.xml")))
+    writeLines(make_qpl_xml(name, qrefs, pool_id), file.path(pkgdir, paste0(name, "_qpl.xml")))
 
     ## Add solution to xml as qtimetadata
     if(metasolution) solution_to_qtimetadata(name, rval, path = workdir)
@@ -258,6 +265,11 @@ ilias_item_maxattempts <- function(item_xml) {
 }
 
 
+ilias_bare_qid <- function(qref) {
+  sub("^.*_qst_([0-9]+)$", "\\1", qref)
+}
+
+
 ilias_itemfeedback <- function(item_xml) {
   start <- grep("^\\s*<itemfeedback", item_xml)
   end <- grep("^\\s*</itemfeedback>\\s*$", item_xml)
@@ -266,16 +278,16 @@ ilias_itemfeedback <- function(item_xml) {
 }
 
 
-patch_item_ilias <- function(item_xml, item_id, title, questiontype) {
+patch_item_ilias <- function(item_xml, item_id, title, questiontype, maxattempts = 0) {
   meta_start <- grep("^\\s*<itemmetadata>\\s*$", item_xml)
   meta_end <- grep("^\\s*</itemmetadata>\\s*$", item_xml)
   if(length(meta_start) != 1L || length(meta_end) != 1L || meta_end < meta_start) {
     stop("cannot locate <itemmetadata> block in generated ILIAS item")
   }
 
-  maxattempts <- ilias_item_maxattempts(item_xml)
   rval <- item_xml[-(meta_start:meta_end)]
-  rval[1L] <- ilias_item_header(item_id, title, maxattempts)
+  rval[1L] <- ilias_item_header(item_id, title,
+    paste0('maxattempts="', if(is.infinite(maxattempts) || maxattempts == 0) 0 else maxattempts, '"'))
   rval <- append(rval, ilias_item_metadata(questiontype), after = 1L)
 
   p <- grep("^\\s*<presentation>\\s*$", rval)
@@ -426,20 +438,21 @@ ilias_gap_xml <- function(type, gap_id, choices, solution, tolerance, points, ma
     presentation <- c(presentation,
       paste0('<response_label ident="', j - 1L, '">'),
       '<material>',
-      paste0('<mattext texttype="text/xhtml">', ilias_escape_text(choices[j]), '</mattext>'),
+      paste0('<mattext>', ilias_escape_text(choices[j]), '</mattext>'),
       '</material>',
       '</response_label>'
     )
   }
   presentation <- c(presentation, '</render_choice>', '</response_str>')
 
-  resprocessing <- unlist(lapply(which(correct), function(j) {
+  resprocessing <- unlist(lapply(seq_along(choices), function(j) {
+    pts <- if(correct[j]) choice_points else 0
     c(
       '<respcondition continue="Yes">',
       '<conditionvar>',
       paste0('<varequal respident="', gap_id, '">', ilias_escape_text(choices[j]), '</varequal>'),
       '</conditionvar>',
-      paste0('<setvar action="Add">', ilias_format_value(choice_points), '</setvar>'),
+      paste0('<setvar action="Add">', ilias_format_value(pts), '</setvar>'),
       '</respcondition>'
     )
   }), use.names = FALSE)
@@ -448,7 +461,7 @@ ilias_gap_xml <- function(type, gap_id, choices, solution, tolerance, points, ma
 }
 
 
-make_item_ilias_cloze <- function(item_xml, x, item_id, title) {
+make_item_ilias_cloze <- function(item_xml, x, item_id, title, maxattempts = 0) {
   solution <- if(!is.list(x$metainfo$solution)) list(x$metainfo$solution) else x$metainfo$solution
   n <- length(solution)
   type <- x$metainfo$clozetype
@@ -458,8 +471,7 @@ make_item_ilias_cloze <- function(item_xml, x, item_id, title) {
   if(is.null(questionlist)) questionlist <- vector("list", n)
   maxchars <- ilias_maxchars(x, n)
 
-  points <- if(is.null(x$metainfo$points)) 1 else x$metainfo$points
-  if(length(points) == 1L) points <- points / n
+  points <- if(is.null(x$metainfo$points)) rep(1, n) else x$metainfo$points
   q_points <- rep(points, length.out = n)
 
   presentation <- c(
@@ -513,7 +525,8 @@ make_item_ilias_cloze <- function(item_xml, x, item_id, title) {
   resprocessing <- c(resprocessing, '</resprocessing>')
 
   c(
-    ilias_item_header(item_id, title, ilias_item_maxattempts(item_xml)),
+    ilias_item_header(item_id, title,
+      paste0('maxattempts="', if(is.infinite(maxattempts) || maxattempts == 0) 0 else maxattempts, '"')),
     ilias_item_metadata("CLOZE QUESTION",
       include_author = FALSE, include_fixed_text_length = FALSE),
     presentation,
@@ -530,7 +543,7 @@ ilias_collapse_xml <- function(xml, xmlcollapse) {
 }
 
 
-make_qpl_xml <- function(name, qrefs) {
+make_qpl_xml <- function(name, qrefs, pool_id = paste0(name, "_qpl")) {
   xml <- c(
     '<?xml version="1.0" encoding="utf-8"?>',
     '<!DOCTYPE Test SYSTEM "http://www.ilias.uni-koeln.de/download/dtd/ilias_co.dtd">',
@@ -538,7 +551,7 @@ make_qpl_xml <- function(name, qrefs) {
     '<ContentObject Type="Questionpool_Test">',
     '<MetaData>',
     '<General Structure="Hierarchical">',
-    paste0('<Identifier Catalog="ILIAS" Entry="', name, '_qpl"/>'),
+    paste0('<Identifier Catalog="ILIAS" Entry="', pool_id, '"/>'),
     paste0('<Title Language="en">', name, '</Title>'),
     '<Language Language="en"/>',
     '<Description Language="en"/>',
@@ -562,7 +575,14 @@ make_qpl_xml <- function(name, qrefs) {
     )
   }
 
-  c(xml, '</ContentObject>')
+  xml <- c(xml, '<QuestionSkillAssignments>')
+  for(qref in qrefs) {
+    xml <- c(xml,
+      paste0('<TriggerQuestion Id="', ilias_bare_qid(qref), '"></TriggerQuestion>')
+    )
+  }
+
+  c(xml, '</QuestionSkillAssignments>', '</ContentObject>')
 }
 
 

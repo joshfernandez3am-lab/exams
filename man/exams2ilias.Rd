@@ -19,7 +19,7 @@
     duration = NULL, stitle = "Exercise", ititle = "Question",
     adescription = "Please solve the following exercises.",
     sdescription = "Please answer the following question.", 
-    maxattempts = 1, cutvalue = 0, solutionswitch = TRUE, zip = TRUE,
+    maxattempts = 0, cutvalue = 0, solutionswitch = TRUE, zip = TRUE,
     points = NULL, eval = list(partial = TRUE, negative = FALSE),
     converter = "pandoc-mathjax", xmlcollapse = TRUE,
     metasolution = FALSE, \dots)
