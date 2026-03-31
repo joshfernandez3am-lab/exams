@@ -244,19 +244,17 @@ ilias_item_metadata <- function(questiontype, ilias_version = "9.17.0",
       '<fieldlabel>AUTHOR</fieldlabel>',
       paste0('<fieldentry>', ilias_escape_text(author), '</fieldentry>'),
       '</qtimetadatafield>'
-    ), after = 9L)
+    ), after = 11L)  ## FIX: Changed 9L to 11L to stop nesting inside QUESTIONTYPE
   }
   if(include_fixed_text_length) {
-    pos <- grep("<fieldlabel>identicalScoring</fieldlabel>", xml, fixed = TRUE)[1L] - 1L
+    pos <- grep("<fieldlabel>identicalScoring</fieldlabel>", xml, fixed = TRUE)[1L]
     xml <- append(xml, c(
       '<qtimetadatafield>',
       '<fieldlabel>fixedTextLength</fieldlabel>',
       '<fieldentry/>',
       '</qtimetadatafield>'
-    ), after = pos)
+    ), after = pos - 2L)  ## FIX: Appending 2 lines up to stop nesting inside identicalScoring
   }
-  xml
-}
 
 
 ilias_item_maxattempts <- function(item_xml) {
