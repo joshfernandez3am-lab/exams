@@ -964,12 +964,12 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
     }
 
 ## scoring/solution display for the correct answers
-    ## REFINED FIREWALL: More robust check for ILIAS flavor
     is_ilias <- identical(flavor, "ilias")
+    is_ilias_choice <- is_ilias && (x$metainfo$type %in% c("mchoice", "schoice"))
 
-    if(!multiple_dropdowns) {
-      if(is_ilias && x$metainfo$type == "schoice") {
-        ## FIX A: ILIAS 9.x schoice (Simple Additive Logic, no complex booleans)
+    if (is_ilias_choice) {
+      ## ILIAS 9.x NATIVE LOGIC BYPASS
+      if (x$metainfo$type == "schoice") {
         xml <- c(xml,
           '<respcondition title="Mastery" continue="Yes">',
           '<conditionvar>',
@@ -979,8 +979,46 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
           '<displayfeedback feedbacktype="Response" linkrefid="Mastery"/>',
           '</respcondition>'
         )
-      } else if(!(is_ilias && eval$partial)) {
-        ## FIX B: Standard QTI logic (bypassed if ILIAS mchoice with partial=TRUE)
+      } else if (x$metainfo$type == "mchoice") {
+        ## ILIAS REQUIRES CHECKED & UNCHECKED RULES FOR EVERY CHECKBOX
+        if(length(correct_answers)) {
+          for(i in seq_along(correct_answers)) {
+            for(j in correct_answers[[i]]) {
+              pts <- if(eval$partial) attr(correct_answers[[i]], "points")["pos"] else points
+              xml <- c(xml,
+                '<respcondition continue="Yes">',
+                '<conditionvar>', j, '</conditionvar>',
+                paste0('<setvar varname="SCORE" action="Add">', pts, '</setvar>'),
+                '</respcondition>',
+                '<respcondition continue="Yes">',
+                '<conditionvar><not>', j, '</not></conditionvar>',
+                '<setvar varname="SCORE" action="Add">0</setvar>',
+                '</respcondition>'
+              )
+            }
+          }
+        }
+        if(length(wrong_answers)) {
+          for(i in seq_along(wrong_answers)) {
+            for(j in wrong_answers[[i]]) {
+              pts <- if(eval$partial) attr(wrong_answers[[i]], "points")["neg"] else 0
+              xml <- c(xml,
+                '<respcondition continue="Yes">',
+                '<conditionvar>', j, '</conditionvar>',
+                paste0('<setvar varname="SCORE" action="Add">', pts, '</setvar>'),
+                '</respcondition>',
+                '<respcondition continue="Yes">',
+                '<conditionvar><not>', j, '</not></conditionvar>',
+                '<setvar varname="SCORE" action="Add">0</setvar>',
+                '</respcondition>'
+              )
+            }
+          }
+        }
+      }
+    } else {
+      ## --- START OF ORIGINAL R/EXAMS GENERIC LOGIC ---
+      if(!multiple_dropdowns) {
         xml <- c(xml,
           paste('<respcondition title="Mastery"', if(canvas) 'continue="No">' else ' continue="Yes">'),
           '<conditionvar>',
@@ -1008,152 +1046,87 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
           paste('<displayfeedback feedbacktype="Response"', if(canvas) 'linkrefid="correct_fb"/>' else 'linkrefid="Mastery"/>'),
           '</respcondition>'
         )
-      }
-    } else {
-      for(i in seq_along(correct_answers)) {
-        xml <- c(xml,
-          '<respcondition>',
-          '<conditionvar>',
-          correct_answers[[i]],
-          '</conditionvar>',
-          paste0('<setvar varname="SCORE" action="Add">', if(eval$partial) attr(correct_answers[[i]], "points")["pos"] else points, '</setvar>'),
-          '</respcondition>'
-        )
-      }
-    }
-
-    ## force display of correct answers of num exercises
-    if(length(correct_num)) {
-      for(j in correct_num) {
-        xml <- c(xml,
-          '<respcondition continue="Yes" title="Mastery">',
-          '<conditionvar>',
-          j,
-          '</conditionvar>',
-          if(fix_num) {
-            c(
-              paste('<setvar varname="SCORE" action="Add">', 0.001, '</setvar>', sep = ''),
-              paste('<setvar varname="SCORE" action="Add">', -0.001, '</setvar>', sep = '')
-            )
-          } else NULL,
-          '</respcondition>'
-        )
-      }
-    }
-
-    ## force display of all other correct answers
-    if(length(correct_answers)) {
-      for(j in seq_along(correct_answers)) {
-        if(attr(correct_answers[[j]], "type") != "num") {
-          if(canvas & grepl("choice", attr(correct_answers[[j]], "type"))) {
-            if((length(correct_answers) > 1L) & !multiple_dropdowns) {
-              xml <- c(xml,
-                '<respcondition continue="Yes" title="Mastery">',
-                '<conditionvar>',
-                correct_answers[[j]],
-                '</conditionvar>',
-                '</respcondition>'
-              )
-            }
-          } else if (!is_ilias) {  ## FIX C: Skip empty, schema-breaking XML blocks for ILIAS
-            xml <- c(xml,
-              '<respcondition continue="Yes" title="Mastery">',
-              '<conditionvar>',
-              correct_answers[[j]],
-              '</conditionvar>',
-              '</respcondition>'
-            )
-          }
-        }
-      }
-    }
-
-    ## handling incorrect answers
-    correct_answers <- unlist(correct_answers)
-    wrong_answers <- c(unlist(wrong_answers), unlist(wrong_num))
-
-    if(!eval$partial & x$metainfo$type == "cloze") {
-      if(length(correct_answers) & !multiple_dropdowns) {
+      } else {
         for(i in seq_along(correct_answers)) {
-            xml <- c(xml,
-              '<respcondition title="Fail" continue="Yes">',
-              '<conditionvar>',
-              '<not>',
-              correct_answers[[i]],
-              '</not>',
-              '</conditionvar>',
-              paste('<setvar varname="SCORE" action="Add">',
-                -1 * n * points, '</setvar>', sep = ''),
-              '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
-              '</respcondition>'
-            )
-
+          xml <- c(xml,
+            '<respcondition>',
+            '<conditionvar>',
+            correct_answers[[i]],
+            '</conditionvar>',
+            paste0('<setvar varname="SCORE" action="Add">', if(eval$partial) attr(correct_answers[[i]], "points")["pos"] else points, '</setvar>'),
+            '</respcondition>'
+          )
         }
       }
 
-      if(length(wrong_answers) & !multiple_dropdowns) {
-        for(i in seq_along(wrong_answers)) {
-          for(j in wrong_answers[[i]]) {
-            xml <- c(xml,
-              '<respcondition continue="Yes" title="Fail">',
-              '<conditionvar>',
-              j,
-              '</conditionvar>',
-              paste('<setvar varname="SCORE" action="Add">',
-                -1 * n * points, '</setvar>', sep = ''),
-              '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
-              '</respcondition>'
-            )
+      if(length(correct_num)) {
+        for(j in correct_num) {
+          xml <- c(xml,
+            '<respcondition continue="Yes" title="Mastery">',
+            '<conditionvar>', j, '</conditionvar>',
+            if(fix_num) {
+              c(paste('<setvar varname="SCORE" action="Add">', 0.001, '</setvar>', sep = ''),
+                paste('<setvar varname="SCORE" action="Add">', -0.001, '</setvar>', sep = ''))
+            } else NULL,
+            '</respcondition>'
+          )
+        }
+      }
+
+      if(length(correct_answers)) {
+        for(j in seq_along(correct_answers)) {
+          if(attr(correct_answers[[j]], "type") != "num") {
+            if(canvas & grepl("choice", attr(correct_answers[[j]], "type"))) {
+              if((length(correct_answers) > 1L) & !multiple_dropdowns) {
+                xml <- c(xml, '<respcondition continue="Yes" title="Mastery">', '<conditionvar>', correct_answers[[j]], '</conditionvar>', '</respcondition>')
+              }
+            } else {
+              xml <- c(xml, '<respcondition continue="Yes" title="Mastery">', '<conditionvar>', correct_answers[[j]], '</conditionvar>', '</respcondition>')
+            }
           }
         }
       }
-    }
 
-if(!canvas) {
-      if(!(is_ilias && eval$partial)) {  ## FIX B (continued): Zombie Logic Firewall for Fail block
-          xml <- c(xml,
-            '<respcondition title="Fail" continue="Yes">',
-            '<conditionvar>',
-            if(!is.null(wrong_answers)) NULL else '<not>',
-            if(is.null(wrong_answers)) {
-              c(if(length(correct_answers) > 1) '<and>' else NULL,
-                correct_answers,
-                if(length(correct_answers) > 1) '</and>' else NULL)
-            } else {
-              c('<or>', wrong_answers, '</or>')
-            },
-            if(!is.null(wrong_answers)) NULL else '</not>',
-            '</conditionvar>',
-            if(!eval$partial & !is.na(minvalue)) {
-              paste('<setvar varname="SCORE" action="Set">', minvalue, '</setvar>', sep = '')
-            } else NULL,
-            '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
-            '</respcondition>'
-          )
+      correct_answers <- unlist(correct_answers)
+      wrong_answers <- c(unlist(wrong_answers), unlist(wrong_num))
+
+      if(!eval$partial & x$metainfo$type == "cloze") {
+        if(length(correct_answers) & !multiple_dropdowns) {
+          for(i in seq_along(correct_answers)) {
+              xml <- c(xml, '<respcondition title="Fail" continue="Yes">', '<conditionvar>', '<not>', correct_answers[[i]], '</not>', '</conditionvar>', paste('<setvar varname="SCORE" action="Add">', -1 * n * points, '</setvar>', sep = ''), '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>', '</respcondition>')
+          }
+        }
+        if(length(wrong_answers) & !multiple_dropdowns) {
+          for(i in seq_along(wrong_answers)) {
+            for(j in wrong_answers[[i]]) {
+              xml <- c(xml, '<respcondition continue="Yes" title="Fail">', '<conditionvar>', j, '</conditionvar>', paste('<setvar varname="SCORE" action="Add">', -1 * n * points, '</setvar>', sep = ''), '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>', '</respcondition>')
+            }
+          }
+        }
       }
 
-      ## handle all other cases
-      if(!(is_ilias && x$metainfo$type == "mchoice")) {  ## FIX D: Remove illegal <other/> tag for ILIAS mchoice
-          xml <- c(xml,
-            '<respcondition title="Fail" continue="Yes">',
-            '<conditionvar>',
-            '<other/>',
-            '</conditionvar>',
-            paste('<setvar varname="SCORE" action="Set">', 0, '</setvar>', sep = ''),
-            '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
-            '</respcondition>'
-          )
+      if(!canvas) {
+        xml <- c(xml,
+          '<respcondition title="Fail" continue="Yes">',
+          '<conditionvar>',
+          if(!is.null(wrong_answers)) NULL else '<not>',
+          if(is.null(wrong_answers)) {
+            c(if(length(correct_answers) > 1) '<and>' else NULL, correct_answers, if(length(correct_answers) > 1) '</and>' else NULL)
+          } else {
+            c('<or>', wrong_answers, '</or>')
+          },
+          if(!is.null(wrong_answers)) NULL else '</not>',
+          '</conditionvar>',
+          if(!eval$partial & !is.na(minvalue)) { paste('<setvar varname="SCORE" action="Set">', minvalue, '</setvar>', sep = '') } else NULL,
+          '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
+          '</respcondition>',
+          '<respcondition title="Fail" continue="Yes">', '<conditionvar>', '<other/>', '</conditionvar>', paste('<setvar varname="SCORE" action="Set">', 0, '</setvar>', sep = ''), '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>', '</respcondition>'
+        )
+      } else {
+        xml <- c(xml, '<respcondition continue="Yes">', '<conditionvar>', '<other/>', '</conditionvar>', '<displayfeedback feedbacktype="Response" linkrefid="general_incorrect_fb"/>', '</respcondition>')
       }
-    } else {
-      xml <- c(xml,
-        '<respcondition continue="Yes">',
-        '<conditionvar>',
-        '<other/>',
-        '</conditionvar>',
-        '<displayfeedback feedbacktype="Response" linkrefid="general_incorrect_fb"/>',
-        '</respcondition>'
-      )
     }
+    ## --- END OF ORIGINAL R/EXAMS GENERIC LOGIC ---
 
     ## end of response processing
     xml <- c(xml, '</resprocessing>')
