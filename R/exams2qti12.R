@@ -546,10 +546,9 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
     } else if(flavor == "ilias") {
       ## Safely wrap text for ILIAS, and ONLY style actual code blocks
       questionlist <- lapply(questionlist, function(q) {
-        ## 1. If the option is marked as code, upgrade it with our nice CSS
-        if(grepl("<code>", q, fixed = TRUE)) {
-          q <- gsub("<code>", '<code style="font-family:monospace; background-color:#f8f9fa; padding:1px 4px; border:1px solid #ddd; border-radius:3px;">', q, fixed = TRUE)
-        }
+        ## 1. Upgrade <code> tags with our nice CSS (gsub is vectorized, so no 'if' needed)
+        q <- gsub("<code>", '<code style="font-family:monospace; background-color:#f8f9fa; padding:1px 4px; border:1px solid #ddd; border-radius:3px;">', q, fixed = TRUE)
+        
         ## 2. Wrap EVERYTHING in a <span> to protect against ILIAS line-break bugs
         ifelse(grepl("<span", q, fixed = TRUE), q, paste0("<span>", q, "</span>"))
       })
