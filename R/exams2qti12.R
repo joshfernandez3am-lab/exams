@@ -905,69 +905,13 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
       wrong_num <- unlist(wrong_num)
     }
 
-    ## partial points
-    if((eval$partial | x$metainfo$type == "cloze") & !multiple_dropdowns) {
-      if(length(correct_answers)) {
-        for(i in seq_along(correct_answers)) {
-          for(j in correct_answers[[i]]) {
-            xml <- c(xml,
-              '<respcondition continue="Yes" title="Mastery">',
-              '<conditionvar>',
-              j,
-              '</conditionvar>',
-              paste('<setvar varname="SCORE" action="Add">',
-                attr(correct_answers[[i]], "points")["pos"], '</setvar>', sep = ''),
-              '</respcondition>'
-            )
-          }
-        }
-      }
-      if(length(wrong_answers)) {
-        for(i in seq_along(wrong_answers)) {
-          for(j in wrong_answers[[i]]) {
-            xml <- c(xml,
-              '<respcondition continue="Yes" title="Fail">',
-              '<conditionvar>',
-              j,
-              '</conditionvar>',
-              paste('<setvar varname="SCORE" action="Add">',
-                attr(wrong_answers[[i]], "points")["neg"], '</setvar>', sep = ''),
-              '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
-              '</respcondition>'
-            )
-          }
-        }
-      }
-    }
-
-    ## partial cloze incorrect num string answers
-    if(eval$partial & x$metainfo$type == "cloze") {
-      if(length(correct_answers)) {
-        for(i in seq_along(correct_answers)) {
-          ctype <- attr(correct_answers[[i]], "type")
-          if(ctype == "string" || ctype == "num" || ctype == "schoice") {
-            xml <- c(xml,
-              '<respcondition title="Fail" continue="Yes">',
-              '<conditionvar>',
-              '<not>',
-              correct_answers[[i]],
-              '</not>',
-              '</conditionvar>',
-              paste('<setvar varname="SCORE" action="Add">',
-                attr(correct_answers[[i]], "points")["neg"], '</setvar>', sep = ''),
-              '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
-              '</respcondition>'
-            )
-          }
-        }
-      }
-    }
-
-## scoring/solution display for the correct answers
+## ---------------------------------------------------------
+    ## RESPONSE PROCESSING
+    ## ---------------------------------------------------------
     is_ilias <- identical(flavor, "ilias")
     is_ilias_choice <- is_ilias && (x$metainfo$type %in% c("mchoice", "schoice"))
 
-    if (is_ilias_choice) {
+    if(is_ilias_choice) {
       ## ILIAS 9.x NATIVE LOGIC BYPASS
       if (x$metainfo$type == "schoice") {
         xml <- c(xml,
@@ -980,7 +924,6 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
           '</respcondition>'
         )
       } else if (x$metainfo$type == "mchoice") {
-        ## ILIAS REQUIRES CHECKED & UNCHECKED RULES FOR EVERY CHECKBOX
         if(length(correct_answers)) {
           for(i in seq_along(correct_answers)) {
             for(j in correct_answers[[i]]) {
@@ -1018,6 +961,65 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
       }
     } else {
       ## --- START OF ORIGINAL R/EXAMS GENERIC LOGIC ---
+      ## (This entire section is now safely skipped for ILIAS schoice/mchoice)
+      if((eval$partial | x$metainfo$type == "cloze") & !multiple_dropdowns) {
+        if(length(correct_answers)) {
+          for(i in seq_along(correct_answers)) {
+            for(j in correct_answers[[i]]) {
+              xml <- c(xml,
+                '<respcondition continue="Yes" title="Mastery">',
+                '<conditionvar>',
+                j,
+                '</conditionvar>',
+                paste('<setvar varname="SCORE" action="Add">',
+                  attr(correct_answers[[i]], "points")["pos"], '</setvar>', sep = ''),
+                '</respcondition>'
+              )
+            }
+          }
+        }
+        if(length(wrong_answers)) {
+          for(i in seq_along(wrong_answers)) {
+            for(j in wrong_answers[[i]]) {
+              xml <- c(xml,
+                '<respcondition continue="Yes" title="Fail">',
+                '<conditionvar>',
+                j,
+                '</conditionvar>',
+                paste('<setvar varname="SCORE" action="Add">',
+                  attr(wrong_answers[[i]], "points")["neg"], '</setvar>', sep = ''),
+                '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
+                '</respcondition>'
+              )
+            }
+          }
+        }
+      }
+
+      ## partial cloze incorrect num string answers
+      if(eval$partial & x$metainfo$type == "cloze") {
+        if(length(correct_answers)) {
+          for(i in seq_along(correct_answers)) {
+            ctype <- attr(correct_answers[[i]], "type")
+            if(ctype == "string" || ctype == "num" || ctype == "schoice") {
+              xml <- c(xml,
+                '<respcondition title="Fail" continue="Yes">',
+                '<conditionvar>',
+                '<not>',
+                correct_answers[[i]],
+                '</not>',
+                '</conditionvar>',
+                paste('<setvar varname="SCORE" action="Add">',
+                  attr(correct_answers[[i]], "points")["neg"], '</setvar>', sep = ''),
+                '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
+                '</respcondition>'
+              )
+            }
+          }
+        }
+      }
+
+      ## scoring/solution display for the correct answers
       if(!multiple_dropdowns) {
         xml <- c(xml,
           paste('<respcondition title="Mastery"', if(canvas) 'continue="No">' else ' continue="Yes">'),
