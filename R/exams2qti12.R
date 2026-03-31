@@ -1109,7 +1109,7 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
       }
     }
 
-    if(!canvas) {
+if(!canvas) {
       if(!(is_ilias && eval$partial)) {  ## FIX B (continued): Zombie Logic Firewall for Fail block
           xml <- c(xml,
             '<respcondition title="Fail" continue="Yes">',
@@ -1132,7 +1132,7 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
           )
       }
 
-## handle all other cases
+      ## handle all other cases
       if(!(is_ilias && x$metainfo$type == "mchoice")) {  ## FIX D: Remove illegal <other/> tag for ILIAS mchoice
           xml <- c(xml,
             '<respcondition title="Fail" continue="Yes">',
@@ -1144,6 +1144,16 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
             '</respcondition>'
           )
       }
+    } else {
+      xml <- c(xml,
+        '<respcondition continue="Yes">',
+        '<conditionvar>',
+        '<other/>',
+        '</conditionvar>',
+        '<displayfeedback feedbacktype="Response" linkrefid="general_incorrect_fb"/>',
+        '</respcondition>'
+      )
+    }
 
     ## end of response processing
     xml <- c(xml, '</resprocessing>')
