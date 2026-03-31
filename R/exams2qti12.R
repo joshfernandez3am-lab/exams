@@ -1132,26 +1132,18 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
           )
       }
 
-      ## handle all other cases
-      xml <- c(xml,
-        '<respcondition title="Fail" continue="Yes">',
-        '<conditionvar>',
-        '<other/>',
-        '</conditionvar>',
-        paste('<setvar varname="SCORE" action="Set">', 0, '</setvar>', sep = ''),
-        '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
-        '</respcondition>'
-      )
-    } else {
-      xml <- c(xml,
-        '<respcondition continue="Yes">',
-        '<conditionvar>',
-        '<other/>',
-        '</conditionvar>',
-        '<displayfeedback feedbacktype="Response" linkrefid="general_incorrect_fb"/>',
-        '</respcondition>'
-      )
-    }
+## handle all other cases
+      if(!(is_ilias && x$metainfo$type == "mchoice")) {  ## FIX D: Remove illegal <other/> tag for ILIAS mchoice
+          xml <- c(xml,
+            '<respcondition title="Fail" continue="Yes">',
+            '<conditionvar>',
+            '<other/>',
+            '</conditionvar>',
+            paste('<setvar varname="SCORE" action="Set">', 0, '</setvar>', sep = ''),
+            '<displayfeedback feedbacktype="Solution" linkrefid="Solution"/>',
+            '</respcondition>'
+          )
+      }
 
     ## end of response processing
     xml <- c(xml, '</resprocessing>')
