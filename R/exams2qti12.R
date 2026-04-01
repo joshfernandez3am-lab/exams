@@ -796,12 +796,12 @@ make_itembody_qti12 <- function(rtiming = FALSE, shuffle = FALSE, rshuffle = shu
                       ']]></varequal>\n', sep = "")), collapse = '\n', sep = '')
                   } else NULL,
                   '<and>\n',
-                  paste('<vargte respident="', ids[[i]]$response, '"><![CDATA[',
+                  paste('<vargte respident="', ids[[i]]$response, '">',
                     solution[[i]][j] - max(tol[[i]]),
-                    ']]></vargte>\n', sep = ""),
-                  paste('<varlte respident="', ids[[i]]$response, '"><![CDATA[',
+                    '</vargte>\n', sep = ""),
+                  paste('<varlte respident="', ids[[i]]$response, '">',
                     solution[[i]][j] + max(tol[[i]]),
-                    ']]></varlte>\n', sep = ""),
+                    '</varlte>\n', sep = ""),
                   '</and>',
                   if(canvas) '\n</or>' else NULL,
                   collapse = '\n', sep = ''
